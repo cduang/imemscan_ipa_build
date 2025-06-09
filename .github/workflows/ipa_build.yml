@@ -124,34 +124,34 @@ jobs:
         mkdir -p build/ipa/Payload
         cp -r build/iMemScan.xcarchive/Products/Applications/*.app build/ipa/Payload/
         
-        # 创建带时间戳和语言后缀的文件名
-        TIMESTAMP=$(date +'%Y%m%d_%H%M%S')
-        VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "iMemScan/Info.plist")
-        BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "iMemScan/Info.plist")
+        # 创建带日期和语言后缀的文件名
+        BUILD_DATE=$(date +'%Y%m%d')
+        BUILD_TIME=$(date +'%H%M%S')
+        
+        # 设置语言后缀
+        if [ "${{ matrix.language }}" = "zh-Hans" ]; then
+          LANGUAGE_SUFFIX="_CN"
+        elif [ "${{ matrix.language }}" = "en" ]; then
+          LANGUAGE_SUFFIX="_EN"
+        else
+          LANGUAGE_SUFFIX="_DE"
+        fi
+        
+        # 创建最终版本号
+        FINAL_VERSION="${BUILD_DATE}${LANGUAGE_SUFFIX}"
         
         # 创建IPA文件
         cd build/ipa
-        zip -r "../iMemScan_v${VERSION_NUMBER}_${BUILD_NUMBER}_${TIMESTAMP}${{ env.LANGUAGE_SUFFIX }}.ipa" .
+        zip -r "../iMemScan_${FINAL_VERSION}.ipa" .
         cd ../..
         
         # 设置IPA路径环境变量
-        IPA_FILENAME="iMemScan_v${VERSION_NUMBER}_${BUILD_NUMBER}_${TIMESTAMP}${{ env.LANGUAGE_SUFFIX }}.ipa"
+        IPA_FILENAME="iMemScan_${FINAL_VERSION}.ipa"
         echo "IPA_PATH=build/${IPA_FILENAME}" >> $GITHUB_ENV
         echo "IPA_FILENAME=${IPA_FILENAME}" >> $GITHUB_ENV
-        
-        # 获取版本号
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          VERSION_NUMBER="${{ github.event.inputs.version }}"
-        else
-          VERSION_NUMBER="${VERSION}"
-        fi
-        # 设置版本号环境变量
-        echo "VERSION_NUMBER=${VERSION_NUMBER}" >> $GITHUB_ENV
-        echo "BUILD_NUMBER=${BUILD_NUMBER}" >> $GITHUB_ENV
-        # 确保版本号格式正确
-        FINAL_VERSION="${VERSION_NUMBER}_${BUILD_NUMBER}"
-        echo "VERSION=${FINAL_VERSION}" >> $GITHUB_ENV
         echo "FINAL_VERSION=${FINAL_VERSION}" >> $GITHUB_ENV
+        echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_ENV
+        echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
         
         echo "LANGUAGE=${{ matrix.language }}" >> $GITHUB_ENV
     
@@ -163,6 +163,14 @@ jobs:
         retention-days: 3  # 缩短保留时间，减少存储使用
         compression-level: 9  # 最高压缩率
     
+    - name: 设置输出变量
+      if: matrix.language == 'zh-Hans'  # 只由中文构建任务创建release
+      id: set_outputs
+      run: |
+        echo "final_version=$FINAL_VERSION" >> $GITHUB_OUTPUT
+        echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+        echo "build_time=$BUILD_TIME" >> $GITHUB_OUTPUT
+    
     - name: 🚀 创建Release并上传IPA
       if: matrix.language == 'zh-Hans'  # 只由中文构建任务创建release
       id: create_release
@@ -172,16 +180,16 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref_name || format('v{0}', github.event.inputs.version) }}
-        name: iMemScan ${{ env.FINAL_VERSION }} 多语言版本
+        tag_name: ${{ github.ref_name || format('v{0}', steps.set_outputs.outputs.build_date) }}
+        name: iMemScan ${{ steps.set_outputs.outputs.final_version }} 多语言版本
         files: ${{ env.IPA_PATH }}
         file_glob: true
         body: |
-          # iMemScan ${{ env.FINAL_VERSION }} 多语言版本
+          # iMemScan ${{ steps.set_outputs.outputs.final_version }} 多语言版本
           
           ### 构建信息
-          - 构建时间: ${{ env.TIMESTAMP }}
-          - 版本: ${{ env.FINAL_VERSION }}
+          - 构建时间: ${{ steps.set_outputs.outputs.build_date }} ${{ steps.set_outputs.outputs.build_time }}
+          - 版本: ${{ steps.set_outputs.outputs.final_version }}
           - 包含语言: 简体中文, English, Deutsch
           - 自动构建的未签名IPA文件
           
