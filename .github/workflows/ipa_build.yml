@@ -181,15 +181,15 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref_name || format('v{0}', steps.set_outputs.outputs.build_date) }}
-        name: iMemScan ${{ steps.set_outputs.outputs.final_version }} 多语言版本
+        name: iMemScan ${{ steps.set_outputs.outputs.build_date }} 多语言版本
         files: ${{ env.IPA_PATH }}
         file_glob: true
         body: |
-          # iMemScan ${{ steps.set_outputs.outputs.final_version }} 多语言版本
+          # iMemScan ${{ steps.set_outputs.outputs.build_date }} 多语言版本
           
           ### 构建信息
           - 构建时间: ${{ steps.set_outputs.outputs.build_date }} ${{ steps.set_outputs.outputs.build_time }}
-          - 版本: ${{ steps.set_outputs.outputs.final_version }}
+          - 版本: ${{ steps.set_outputs.outputs.build_date }}
           - 包含语言: 简体中文, English, Deutsch
           - 自动构建的未签名IPA文件
           
