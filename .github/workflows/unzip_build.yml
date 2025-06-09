@@ -62,26 +62,23 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-      # 第六步：添加、提交并推送更改
+      # 第六步：添加、提交并推送更改（排除 .github/workflows 目录）
       - name: Add, commit, and push changes
         run: |
-          # 添加所有更改（包括新解压的文件）到暂存区
+          # 添加除 .github/workflows 目录外的所有更改
           git add .
-
+          git reset -- .github/workflows/
+          
           # 检查是否有实际更改需要提交
-          # --staged 表示只检查暂存区
-          # --quiet 表示不输出差异，只通过退出码判断
           if git diff --staged --quiet; then
-            echo "No changes to commit."
+            echo "No changes to commit (excluding .github/workflows)."
           else
-            echo "Changes detected. Committing..."
+            echo "Changes detected (excluding .github/workflows). Committing..."
             # 提交更改，commit message 中包含 [skip ci] 以防止触发自身
-            git commit -m "Add unzipped content from imemscan_ipa_build.zip [skip ci]"
+            git commit -m "Add unzipped content from imemscan_ipa_build.zip (exclude workflows) [skip ci]"
 
             echo "Pushing changes to main branch..."
             # 推送提交到远程 main 分支
-            # --force 选项是危险的，通常不推荐。这里不使用，让它在有冲突时失败。
-            # 如果你确定需要强制覆盖远程更改，可以添加 --force，但请务必了解其风险。
             git push origin main
           fi
         # 可选：如果解压后不再需要 zip 文件，可以在这里删除它
