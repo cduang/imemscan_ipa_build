@@ -1,0 +1,212 @@
+# iMemScan iOS应用多语言构建工作流
+
+name: 🚀 构建并发布多语言iMemScan IPA (优化版)
+
+# 定义工作流触发条件
+on:
+  # 当推送到main分支或创建tag时触发
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'  # 匹配以v开头的tag，例如v1.0.0
+  # 允许在GitHub Actions页面手动触发工作流
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例如: 1.0.0)'
+        required: true
+  # 每天凌晨2点自动运行
+  schedule:
+    - cron: '0 18 * * *'  # UTC时间18点，即北京时间凌晨2点
+
+# 设置工作流权限
+permissions:
+  contents: write  # 允许写入内容（创建release）
+  packages: write  # 允许上传文件
+
+# 定义构建矩阵，支持三种语言
+env:
+  DESTINATION: 'generic/platform=iOS'  # 构建目标平台
+  CONFIGURATION: 'Release'  # 构建配置
+  SCHEME: 'iMemScan'  # 项目scheme
+  
+jobs:
+  build:
+    name: 🏗️ 构建多语言IPA [${{ matrix.language }}]
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        language: ['zh-Hans', 'en', 'de']
+      fail-fast: false  # 一个语言构建失败不影响其他语言
+      max-parallel: 3    # 最大并行任务数
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: 🛠️ 设置Xcode环境
+      uses: maxim-lobanov/setup-xcode@v1  # 不指定版本，使用默认最新版本
+    
+    # 项目不使用CocoaPods，跳过相关步骤
+    - name: 设置语言环境
+      run: |
+        # 根据语言设置应用显示名称、bundle名称和语言代码
+        case "${{ matrix.language }}" in
+          "zh-Hans")
+            DISPLAY_NAME="内存扫描"
+            SUFFIX="_CN"
+            DEV_LANGUAGE="zh-Hans"
+            ;;
+          "de")
+            DISPLAY_NAME="Speicher-Scan"
+            SUFFIX="_DE"
+            DEV_LANGUAGE="de"
+            ;;
+          *)
+            DISPLAY_NAME="iMemScan"
+            SUFFIX="_EN"
+            DEV_LANGUAGE="en"
+            ;;
+        esac
+        
+        # 检查CFBundleDisplayName是否存在，如果不存在则添加
+        if ! /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "iMemScan/Info.plist" &>/dev/null; then
+            /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string $DISPLAY_NAME" "iMemScan/Info.plist"
+        else
+            /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $DISPLAY_NAME" "iMemScan/Info.plist"
+        fi
+        
+        # 设置开发语言
+        /usr/libexec/PlistBuddy -c "Set :CFBundleDevelopmentRegion $DEV_LANGUAGE" "iMemScan/Info.plist"
+        
+        # 设置环境变量
+        echo "APP_DISPLAY_NAME=$DISPLAY_NAME" >> $GITHUB_ENV
+        echo "LANGUAGE_SUFFIX=$SUFFIX" >> $GITHUB_ENV
+        echo "DEVELOPMENT_LANGUAGE=$DEV_LANGUAGE" >> $GITHUB_ENV
+    
+    - name: 🏭 构建项目
+      run: |
+        # 创建构建目录
+        mkdir -p build/ipa
+        
+        # 设置环境变量
+        export LANGUAGE=${{ matrix.language }}
+        
+        # 并行构建配置
+        CPU_COUNT=$(sysctl -n hw.ncpu)
+        echo "使用 $CPU_COUNT 个CPU核心进行构建"
+        
+        # 构建项目（使用并行编译）
+        xcodebuild -project iMemScan.xcodeproj \
+                  -scheme $SCHEME \
+                  -configuration $CONFIGURATION \
+                  -destination "$DESTINATION" \
+                  -archivePath $PWD/build/iMemScan.xcarchive \
+                  -parallelizeTargets \
+                  -jobs $CPU_COUNT \
+                  -quiet \
+                  clean archive \
+                  CODE_SIGNING_ALLOWED=NO \
+                  CODE_SIGNING_REQUIRED=NO \
+                  CODE_SIGN_IDENTITY="" \
+                  PROVISIONING_PROFILE="" \
+                  PROVISIONING_PROFILE_SPECIFIER="" \
+                  DEVELOPMENT_TEAM="" \
+                  PRODUCT_BUNDLE_IDENTIFIER="com.imemscan.app.$LANGUAGE" \
+                  PRODUCT_BUNDLE_DISPLAY_NAME="${{ env.APP_DISPLAY_NAME }}" \
+                  INFOPLIST_KEY_CFBundleDisplayName="${{ env.APP_DISPLAY_NAME }}" \
+                  -UseModernBuildSystem=YES \
+                  -clonedSourcePackagesDirPath "$PWD/build/cloned_source_packages"
+        
+        # 手动创建Payload目录并复制.app文件
+        mkdir -p build/ipa/Payload
+        cp -r build/iMemScan.xcarchive/Products/Applications/*.app build/ipa/Payload/
+        
+        # 创建带时间戳和语言后缀的文件名
+        TIMESTAMP=$(date +'%Y%m%d_%H%M%S')
+        VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "iMemScan/Info.plist")
+        BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "iMemScan/Info.plist")
+        
+        # 创建IPA文件
+        cd build/ipa
+        zip -r "../iMemScan_v${VERSION_NUMBER}_${BUILD_NUMBER}_${TIMESTAMP}${{ env.LANGUAGE_SUFFIX }}.ipa" .
+        cd ../..
+        
+        # 设置IPA路径环境变量
+        IPA_FILENAME="iMemScan_v${VERSION_NUMBER}_${BUILD_NUMBER}_${TIMESTAMP}${{ env.LANGUAGE_SUFFIX }}.ipa"
+        echo "IPA_PATH=build/${IPA_FILENAME}" >> $GITHUB_ENV
+        echo "IPA_FILENAME=${IPA_FILENAME}" >> $GITHUB_ENV
+        
+        # 获取版本号
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          VERSION_NUMBER="${{ github.event.inputs.version }}"
+        else
+          VERSION_NUMBER="${VERSION}"
+        fi
+        # 设置版本号环境变量
+        echo "VERSION_NUMBER=${VERSION_NUMBER}" >> $GITHUB_ENV
+        echo "BUILD_NUMBER=${BUILD_NUMBER}" >> $GITHUB_ENV
+        # 确保版本号格式正确
+        FINAL_VERSION="${VERSION_NUMBER}_${BUILD_NUMBER}"
+        echo "VERSION=${FINAL_VERSION}" >> $GITHUB_ENV
+        echo "FINAL_VERSION=${FINAL_VERSION}" >> $GITHUB_ENV
+        
+        echo "LANGUAGE=${{ matrix.language }}" >> $GITHUB_ENV
+    
+    - name: ⬆️ 上传构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: ipa-builds-${{ matrix.language }}
+        path: ${{ env.IPA_PATH }}
+        retention-days: 3  # 缩短保留时间，减少存储使用
+        compression-level: 9  # 最高压缩率
+    
+    - name: 🚀 创建Release并上传IPA
+      if: matrix.language == 'zh-Hans'  # 只由中文构建任务创建release
+      id: create_release
+      # 添加超时设置
+      timeout-minutes: 30
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name || format('v{0}', github.event.inputs.version) }}
+        name: iMemScan ${{ env.FINAL_VERSION }} 多语言版本
+        files: ${{ env.IPA_PATH }}
+        file_glob: true
+        body: |
+          # iMemScan ${{ env.FINAL_VERSION }} 多语言版本
+          
+          ### 构建信息
+          - 构建时间: ${{ env.TIMESTAMP }}
+          - 版本: ${{ env.FINAL_VERSION }}
+          - 包含语言: 简体中文, English, Deutsch
+          - 自动构建的未签名IPA文件
+          
+          ### 文件说明
+          - `*_CN.ipa`: 简体中文版
+          - `*_EN.ipa`: 英文版
+          - `*_DE.ipa`: 德文版
+          
+          ### 使用说明
+          1. 下载对应语言版本的IPA文件
+          2. 使用签名工具签名后安装到越狱设备
+          3. 确保设备语言设置与安装的版本匹配以获得最佳体验
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+    
+    - name: ⬆️ 上传其他语言版本到Release
+      if: matrix.language != 'zh-Hans'  # 中文版本已在创建release时上传
+      uses: softprops/action-gh-release@v1
+      # 添加超时设置
+      timeout-minutes: 15
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name || format('v{0}', github.event.inputs.version) }}
+        files: ${{ env.IPA_PATH }}
+        draft: false
+        prerelease: false
