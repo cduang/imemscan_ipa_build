@@ -2,14 +2,9 @@
 
 name: Unzip and Push Build Artifact
 
-# 触发器：当有代码推送到 main 分支时运行
+# 仅支持手动触发
 on:
-  push:
-    branches:
-      - main
-    # 可选：如果你只想在 imemscan_ipa_build.zip 文件发生变化时才运行，可以添加路径过滤
-    # paths:
-    #   - 'imemscan_ipa_build.zip'
+  workflow_dispatch:  # 允许通过 GitHub Actions 页面手动触发
 
 jobs:
   unzip_commit_push:
