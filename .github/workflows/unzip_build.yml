@@ -1,0 +1,89 @@
+# .github/workflows/unzip_and_push.yml
+
+name: Unzip and Push Build Artifact
+
+# 触发器：当有代码推送到 main 分支时运行
+on:
+  push:
+    branches:
+      - main
+    # 可选：如果你只想在 imemscan_ipa_build.zip 文件发生变化时才运行，可以添加路径过滤
+    # paths:
+    #   - 'imemscan_ipa_build.zip'
+
+jobs:
+  unzip_commit_push:
+    runs-on: ubuntu-latest # 使用最新的 Ubuntu 运行环境
+
+    # 为作业步骤授予写入仓库内容的权限，以便推送更改
+    permissions:
+      contents: write
+
+    steps:
+      # 第一步：检出代码
+      # 拉取你的仓库代码到 Actions 运行器中
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # 确保我们获取了完整的历史记录，以便正确推送
+          fetch-depth: 0
+          # 使用 GITHUB_TOKEN 进行身份验证，以便后续推送
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 第二步：解压 zip 文件
+      # 查找并解压 main 分支根目录下的 imemscan_ipa_build.zip
+      # -o 选项表示覆盖现有文件而不询问
+      - name: Unzip build artifact
+        run: |
+          if [ -f imemscan_ipa_build.zip ]; then
+            echo "Found imemscan_ipa_build.zip. Unzipping..."
+            unzip -o imemscan_ipa_build.zip
+            echo "Unzip completed."
+          else
+            echo "Error: imemscan_ipa_build.zip not found in the root directory."
+            # 你可以选择在这里失败 Action
+            # exit 1
+            # 或者只是记录信息然后继续（注意：后续步骤可能因为没有新文件而无效）
+          fi
+
+      # 第三步：显示当前路径
+      - name: Show current path
+        run: pwd
+
+      # 第四步：列出解压后的内容
+      # 显示当前目录下所有文件和文件夹的详细列表
+      - name: List extracted files
+        run: ls -la
+
+      # 第五步：配置 Git 用户信息
+      # 设置用于提交的用户名和邮箱
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      # 第六步：添加、提交并推送更改
+      - name: Add, commit, and push changes
+        run: |
+          # 添加所有更改（包括新解压的文件）到暂存区
+          git add .
+
+          # 检查是否有实际更改需要提交
+          # --staged 表示只检查暂存区
+          # --quiet 表示不输出差异，只通过退出码判断
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            echo "Changes detected. Committing..."
+            # 提交更改，commit message 中包含 [skip ci] 以防止触发自身
+            git commit -m "Add unzipped content from imemscan_ipa_build.zip [skip ci]"
+
+            echo "Pushing changes to main branch..."
+            # 推送提交到远程 main 分支
+            # --force 选项是危险的，通常不推荐。这里不使用，让它在有冲突时失败。
+            # 如果你确定需要强制覆盖远程更改，可以添加 --force，但请务必了解其风险。
+            git push origin main
+          fi
+        # 可选：如果解压后不再需要 zip 文件，可以在这里删除它
+        # run: rm -f imemscan_ipa_build.zip
+
