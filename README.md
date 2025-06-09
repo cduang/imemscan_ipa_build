@@ -62,7 +62,7 @@ iMemScan 是一个功能强大的 iOS 内存扫描工具，专为越狱设备设
 
 ## 构建状态
 
-[![Build Status](https://github.com/yourusername/ipa_build/actions/workflows/ipa_build.yml/badge.svg)](https://github.com/yourusername/ipa_build/actions/workflows/ipa_build.yml)
+[![Build Status](https://github.com/cduang/ipa_build/actions/workflows/ipa_build.yml/badge.svg)](https://github.com/cduang/ipa_build/actions/workflows/ipa_build.yml)
 
 ## 常见问题
 
