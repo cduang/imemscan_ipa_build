@@ -45,22 +45,48 @@ jobs:
         # 确认 ldid 已安装
         which ldid
     
-    # 项目不使用CocoaPods，跳过相关步骤
-    - name: 设置语言环境
+    # 完善语言设置
+    - name: 设置语言环境和本地化
       run: |
         # 设置应用显示名称和语言代码
         DISPLAY_NAME="内存扫描"
         DEV_LANGUAGE="zh-Hans"
         
-        # 检查CFBundleDisplayName是否存在，如果不存在则添加
+        # 查看 Info.plist 内容
+        echo "检查 Info.plist 初始内容："
+        /usr/libexec/PlistBuddy -c "Print" "iMemScan/Info.plist"
+        
+        # 确保 CFBundleDisplayName 设置正确
         if ! /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "iMemScan/Info.plist" &>/dev/null; then
             /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string $DISPLAY_NAME" "iMemScan/Info.plist"
         else
             /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $DISPLAY_NAME" "iMemScan/Info.plist"
         fi
         
-        # 设置开发语言
+        # 设置开发语言为中文
         /usr/libexec/PlistBuddy -c "Set :CFBundleDevelopmentRegion $DEV_LANGUAGE" "iMemScan/Info.plist"
+        
+        # 确保本地化设置
+        if ! /usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "iMemScan/Info.plist" &>/dev/null; then
+            /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations array" "iMemScan/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations:0 string $DEV_LANGUAGE" "iMemScan/Info.plist"
+        else
+            # 清除现有本地化设置并重新添加中文
+            /usr/libexec/PlistBuddy -c "Delete :CFBundleLocalizations" "iMemScan/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations array" "iMemScan/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations:0 string $DEV_LANGUAGE" "iMemScan/Info.plist"
+        fi
+        
+        # 确保首选语言为中文
+        if ! /usr/libexec/PlistBuddy -c "Print :CFBundlePrimaryLanguage" "iMemScan/Info.plist" &>/dev/null; then
+            /usr/libexec/PlistBuddy -c "Add :CFBundlePrimaryLanguage string $DEV_LANGUAGE" "iMemScan/Info.plist"
+        else
+            /usr/libexec/PlistBuddy -c "Set :CFBundlePrimaryLanguage $DEV_LANGUAGE" "iMemScan/Info.plist"
+        fi
+        
+        # 显示修改后的 Info.plist 内容
+        echo "修改后的 Info.plist 内容："
+        /usr/libexec/PlistBuddy -c "Print" "iMemScan/Info.plist"
         
         # 设置环境变量
         echo "APP_DISPLAY_NAME=$DISPLAY_NAME" >> $GITHUB_ENV
@@ -78,7 +104,7 @@ jobs:
         CPU_COUNT=$(sysctl -n hw.ncpu)
         echo "使用 $CPU_COUNT 个CPU核心进行构建"
         
-        # 构建项目（使用并行编译）
+        # 构建项目（使用并行编译），增加语言相关参数
         xcodebuild -project iMemScan.xcodeproj \
                   -scheme $SCHEME \
                   -configuration $CONFIGURATION \
@@ -97,12 +123,44 @@ jobs:
                   PRODUCT_BUNDLE_IDENTIFIER="com.imemscan.app.$LANGUAGE" \
                   PRODUCT_BUNDLE_DISPLAY_NAME="${{ env.APP_DISPLAY_NAME }}" \
                   INFOPLIST_KEY_CFBundleDisplayName="${{ env.APP_DISPLAY_NAME }}" \
+                  DEVELOPMENT_LANGUAGE="${{ env.DEVELOPMENT_LANGUAGE }}" \
                   -UseModernBuildSystem=YES \
                   -clonedSourcePackagesDirPath "$PWD/build/cloned_source_packages"
         
         # 手动创建Payload目录并复制.app文件
         mkdir -p build/ipa/Payload
         cp -r build/iMemScan.xcarchive/Products/Applications/*.app build/ipa/Payload/
+        
+        # 检查并修改应用中的Info.plist
+        APP_INFO_PLIST="build/ipa/Payload/iMemScan.app/Info.plist"
+        if [ -f "$APP_INFO_PLIST" ]; then
+            echo "修改应用包中的Info.plist..."
+            /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 内存扫描" "$APP_INFO_PLIST"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleDevelopmentRegion zh-Hans" "$APP_INFO_PLIST"
+            
+            # 确保有正确的本地化设置
+            if ! /usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "$APP_INFO_PLIST" &>/dev/null; then
+                /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations array" "$APP_INFO_PLIST"
+                /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations:0 string zh-Hans" "$APP_INFO_PLIST"
+            else
+                # 清除现有本地化设置并重新添加中文
+                /usr/libexec/PlistBuddy -c "Delete :CFBundleLocalizations" "$APP_INFO_PLIST"
+                /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations array" "$APP_INFO_PLIST"
+                /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations:0 string zh-Hans" "$APP_INFO_PLIST"
+            fi
+            
+            # 添加首选语言
+            if ! /usr/libexec/PlistBuddy -c "Print :CFBundlePrimaryLanguage" "$APP_INFO_PLIST" &>/dev/null; then
+                /usr/libexec/PlistBuddy -c "Add :CFBundlePrimaryLanguage string zh-Hans" "$APP_INFO_PLIST"
+            else
+                /usr/libexec/PlistBuddy -c "Set :CFBundlePrimaryLanguage zh-Hans" "$APP_INFO_PLIST"
+            fi
+            
+            echo "修改后的应用Info.plist内容："
+            /usr/libexec/PlistBuddy -c "Print" "$APP_INFO_PLIST"
+        else
+            echo "警告：无法找到应用包中的Info.plist"
+        fi
         
         # 确保ldid可用并签名应用
         which ldid
