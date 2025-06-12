@@ -3,21 +3,9 @@
 name: 🚀 构建并发布iMemScan IPA (优化版)
 
 # 定义工作流触发条件
+# 仅支持手动触发
 on:
-  # 当推送到main分支或创建tag时触发
-  push:
-    branches: [ main ]
-    tags:
-      - 'v*'  # 匹配以v开头的tag，例如v1.0.0
-  # 允许在GitHub Actions页面手动触发工作流
-  workflow_dispatch:
-    inputs:
-      version:
-        description: '版本号 (例如: 1.0.0)'
-        required: true
-  # 每天凌晨2点自动运行
-  schedule:
-    - cron: '0 18 * * *'  # UTC时间18点，即北京时间凌晨2点
+  workflow_dispatch:  # 允许通过 GitHub Actions 页面手动触发
 
 # 设置工作流权限
 permissions:
