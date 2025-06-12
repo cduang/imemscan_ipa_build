@@ -1,0 +1,66 @@
+/* 
+  Localizable.strings
+  iMemScan
+
+  Created by yiming on 2021/8/19.
+  
+*/
+
+"授权状态" = "授权状态";
+"设备已冻结" = "设备已冻结";
+"设备标识" = "设备标识";
+"购买授权" = "购买授权";
+"版本" = "版本";
+"卸载应用" = "卸载应用";
+"信息" = "信息";
+"购买" = "购买";
+"卸载" = "卸载";
+"暂无更新" = "暂无更新";
+"您当前版本无需更新" = "您当前版本无需更新";
+"确定要卸载本应用吗？" = "确定要卸载本应用吗？";
+"确定卸载" = "确定卸载";
+"取消" = "取消";
+"复制设备码成功" = "复制设备码成功";
+"modify Value" = "修改值 %@";
+"modifyValueRecord" = "修改值 %@";
+"Complete change" = "保存";
+"Nearby Search" = "<>";
+"Nearby" = "搜索范围";
+"Add to" = "添加";
+"Select First Half" = " < ";
+"Select Second Half" = " > ";
+"Numeric Search" = "搜索";
+"Value Search" = "搜索";
+
+/* TabBar 标签 */
+"Processes" = "进程";
+"Search" = "搜索";
+"Record" = "记录";
+"Memory" = "内存";
+"Settings" = "设置";
+
+/* 设置页面 */
+"Search Lower Limit" = "搜索下限";
+"Search Upper Limit" = "搜索上限";
+"Search range" = "搜索范围";
+"Nearby Range" = "邻近范围";
+"Limit Count" = "限制数量";
+"Loop Script" = "循环脚本";
+"Data Lock" = "数据锁定";
+"Night Mode" = "夜间模式";
+"Usage Agreement" = "使用协议";
+"About App" = "关于应用";
+"%ld Seconds" = "%ld 秒";
+
+/* 搜索页面 */
+"Pull down to refresh" = "下拉刷新";
+"Release to refresh" = "释放刷新";
+"Refreshing data..." = "刷新数据...";
+"Modify All" = "全部修改";
+"Select" = "选择";
+"Value Search" = "值搜索";
+"Nearby Search" = "邻近搜索";
+"Clear" = "清除";
+"Clear Results" = "清除结果";
+"Confirm" = "确认";
+"Reset" = "重置";
