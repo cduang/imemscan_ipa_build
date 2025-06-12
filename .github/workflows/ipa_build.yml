@@ -3,9 +3,14 @@
 name: 🚀 构建并发布iMemScan IPA (优化版)
 
 # 定义工作流触发条件
-# 仅支持手动触发
 on:
-  workflow_dispatch:  # 允许通过 GitHub Actions 页面手动触发
+  # 仅允许在GitHub Actions页面手动触发工作流
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例如: 1.0.0)'
+        required: true
+        default: 'auto'  # 添加默认值
 
 # 设置工作流权限
 permissions:
@@ -17,14 +22,12 @@ env:
   DESTINATION: 'generic/platform=iOS'  # 构建目标平台
   CONFIGURATION: 'Release'  # 构建配置
   SCHEME: 'iMemScan'  # 项目scheme
+  LANGUAGE: 'zh-Hans'  # 设置为简体中文
   
 jobs:
   build:
     name: 🏗️ 构建iMemScan IPA
     runs-on: macos-latest
-    strategy:
-      matrix:
-        language: [zh-Hans]  # 只构建简体中文版本
     
     steps:
     - name: 检出代码
@@ -62,7 +65,7 @@ jobs:
         mkdir -p build/ipa
         
         # 设置环境变量
-        export LANGUAGE=${{ matrix.language }}
+        export LANGUAGE=${{ env.LANGUAGE }}
         
         # 并行构建配置
         CPU_COUNT=$(sysctl -n hw.ncpu)
@@ -120,12 +123,12 @@ jobs:
         echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_ENV
         echo "BUILD_TIME=${BUILD_TIME}" >> $GITHUB_ENV
         
-        echo "LANGUAGE=${{ matrix.language }}" >> $GITHUB_ENV
+        echo "LANGUAGE=${{ env.LANGUAGE }}" >> $GITHUB_ENV
     
     - name: ⬆️ 上传构建产物
       uses: actions/upload-artifact@v4
       with:
-        name: tipa-builds-${{ matrix.language }}
+        name: tipa-builds
         path: build/iMemScanTS.tipa
         retention-days: 3  # 缩短保留时间，减少存储使用
         compression-level: 9  # 最高压缩率
@@ -148,7 +151,6 @@ jobs:
         tag_name: ${{ github.ref_name || format('v{0}', steps.set_outputs.outputs.build_date) }}
         name: iMemScan ${{ steps.set_outputs.outputs.build_date }} 简体中文版
         files: build/iMemScanTS.tipa
-        file_glob: true
         body: |
           # iMemScan ${{ steps.set_outputs.outputs.build_date }} 简体中文版
           
