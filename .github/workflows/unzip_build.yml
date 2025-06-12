@@ -73,8 +73,8 @@ jobs:
             git commit -m "Add unzipped content from imemscan_ipa_build.zip (exclude workflows) [skip ci]"
 
             echo "Pushing changes to main branch..."
-            # 推送提交到远程 main 分支
-            git push origin main
+            # 使用完整的引用规范推送到远程仓库的 main 分支
+            git push origin HEAD:main
           fi
         # 可选：如果解压后不再需要 zip 文件，可以在这里删除它
         # run: rm -f imemscan_ipa_build.zip
