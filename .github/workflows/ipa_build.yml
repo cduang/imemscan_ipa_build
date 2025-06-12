@@ -45,14 +45,29 @@ jobs:
         # 确认 ldid 已安装
         which ldid
     
-    # 完善语言设置
+    # 修改项目的默认语言设置
+    - name: 修改项目默认语言
+      run: |
+        echo "修改项目默认开发区域为中文..."
+        
+        # 修改项目的developmentRegion为中文
+        sed -i '' 's/developmentRegion = en;/developmentRegion = "zh-Hans";/g' iMemScan.xcodeproj/project.pbxproj
+        
+        # 确保中文在knownRegions列表的首位
+        sed -i '' 's/knownRegions = (/knownRegions = (\n\t\t\t\t"zh-Hans",/g' iMemScan.xcodeproj/project.pbxproj
+        
+        # 检查修改结果
+        grep -A 5 "developmentRegion" iMemScan.xcodeproj/project.pbxproj
+        grep -A 5 "knownRegions" iMemScan.xcodeproj/project.pbxproj
+    
+    # 增强语言设置
     - name: 设置语言环境和本地化
       run: |
         # 设置应用显示名称和语言代码
         DISPLAY_NAME="内存扫描"
         DEV_LANGUAGE="zh-Hans"
         
-        # 查看 Info.plist 内容
+        # 查看 Info.plist 初始内容
         echo "检查 Info.plist 初始内容："
         /usr/libexec/PlistBuddy -c "Print" "iMemScan/Info.plist"
         
@@ -84,13 +99,68 @@ jobs:
             /usr/libexec/PlistBuddy -c "Set :CFBundlePrimaryLanguage $DEV_LANGUAGE" "iMemScan/Info.plist"
         fi
         
+        # 添加AppleLanguages设置，强制使用中文
+        if ! /usr/libexec/PlistBuddy -c "Print :AppleLanguages" "iMemScan/Info.plist" &>/dev/null; then
+            /usr/libexec/PlistBuddy -c "Add :AppleLanguages array" "iMemScan/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :AppleLanguages:0 string $DEV_LANGUAGE" "iMemScan/Info.plist"
+        else
+            /usr/libexec/PlistBuddy -c "Delete :AppleLanguages" "iMemScan/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :AppleLanguages array" "iMemScan/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :AppleLanguages:0 string $DEV_LANGUAGE" "iMemScan/Info.plist"
+        fi
+        
+        # 设置默认语言设置
+        if ! /usr/libexec/PlistBuddy -c "Print :CFBundlePreferredLocalizations" "iMemScan/Info.plist" &>/dev/null; then
+            /usr/libexec/PlistBuddy -c "Add :CFBundlePreferredLocalizations array" "iMemScan/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :CFBundlePreferredLocalizations:0 string $DEV_LANGUAGE" "iMemScan/Info.plist"
+        else
+            /usr/libexec/PlistBuddy -c "Delete :CFBundlePreferredLocalizations" "iMemScan/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :CFBundlePreferredLocalizations array" "iMemScan/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :CFBundlePreferredLocalizations:0 string $DEV_LANGUAGE" "iMemScan/Info.plist"
+        fi
+        
         # 显示修改后的 Info.plist 内容
         echo "修改后的 Info.plist 内容："
         /usr/libexec/PlistBuddy -c "Print" "iMemScan/Info.plist"
         
+        # 检查并确保Localizable.strings文件正确
+        echo "检查本地化字符串文件..."
+        if [ -f "iMemScan/zh-Hans.lproj/Localizable.strings" ]; then
+            echo "中文本地化字符串文件存在"
+            cat "iMemScan/zh-Hans.lproj/Localizable.strings"
+        else
+            echo "警告：中文本地化字符串文件不存在！"
+        fi
+        
         # 设置环境变量
         echo "APP_DISPLAY_NAME=$DISPLAY_NAME" >> $GITHUB_ENV
         echo "DEVELOPMENT_LANGUAGE=$DEV_LANGUAGE" >> $GITHUB_ENV
+    
+    # 只创建一个修改脚本，避免YAML语法问题
+    - name: 创建修改ViewController的脚本
+      run: |
+        # 创建脚本文件
+        echo "#!/bin/bash" > fix_viewcontroller.sh
+        echo "# 添加强制使用中文的设置" >> fix_viewcontroller.sh
+        echo "# 修改ViewController.swift" >> fix_viewcontroller.sh
+        echo "cp iMemScan/ViewController.swift iMemScan/ViewController.swift.bak" >> fix_viewcontroller.sh
+        echo "grep -q 'AppleLanguages' iMemScan/ViewController.swift || sed -i '' '/super.viewDidLoad()/ a\\
+        \\ \\ \\ \\ \\ \\ \\ \\ // 强制设置语言为中文\\
+        \\ \\ \\ \\ \\ \\ \\ \\ UserDefaults.standard.set\\([\\\"zh-Hans\\\"]\\, forKey: \\\"AppleLanguages\\\"\\)\\
+        \\ \\ \\ \\ \\ \\ \\ \\ UserDefaults.standard.synchronize\\(\\)\\
+        ' iMemScan/ViewController.swift" >> fix_viewcontroller.sh
+        echo "chmod +x fix_viewcontroller.sh" >> fix_viewcontroller.sh
+        echo "# 脚本创建完成" >> fix_viewcontroller.sh
+        
+        # 赋予执行权限
+        chmod +x fix_viewcontroller.sh
+        
+        # 执行脚本
+        ./fix_viewcontroller.sh
+        
+        # 显示修改后的文件
+        echo "修改后的ViewController.swift内容："
+        cat iMemScan/ViewController.swift
     
     - name: 🏭 构建项目
       run: |
@@ -156,11 +226,36 @@ jobs:
                 /usr/libexec/PlistBuddy -c "Set :CFBundlePrimaryLanguage zh-Hans" "$APP_INFO_PLIST"
             fi
             
+            # 添加AppleLanguages设置
+            if ! /usr/libexec/PlistBuddy -c "Print :AppleLanguages" "$APP_INFO_PLIST" &>/dev/null; then
+                /usr/libexec/PlistBuddy -c "Add :AppleLanguages array" "$APP_INFO_PLIST"
+                /usr/libexec/PlistBuddy -c "Add :AppleLanguages:0 string zh-Hans" "$APP_INFO_PLIST"
+            else
+                /usr/libexec/PlistBuddy -c "Delete :AppleLanguages" "$APP_INFO_PLIST"
+                /usr/libexec/PlistBuddy -c "Add :AppleLanguages array" "$APP_INFO_PLIST"
+                /usr/libexec/PlistBuddy -c "Add :AppleLanguages:0 string zh-Hans" "$APP_INFO_PLIST"
+            fi
+            
+            # 设置默认语言偏好
+            if ! /usr/libexec/PlistBuddy -c "Print :CFBundlePreferredLocalizations" "$APP_INFO_PLIST" &>/dev/null; then
+                /usr/libexec/PlistBuddy -c "Add :CFBundlePreferredLocalizations array" "$APP_INFO_PLIST"
+                /usr/libexec/PlistBuddy -c "Add :CFBundlePreferredLocalizations:0 string zh-Hans" "$APP_INFO_PLIST"
+            else
+                /usr/libexec/PlistBuddy -c "Delete :CFBundlePreferredLocalizations" "$APP_INFO_PLIST"
+                /usr/libexec/PlistBuddy -c "Add :CFBundlePreferredLocalizations array" "$APP_INFO_PLIST"
+                /usr/libexec/PlistBuddy -c "Add :CFBundlePreferredLocalizations:0 string zh-Hans" "$APP_INFO_PLIST"
+            fi
+            
             echo "修改后的应用Info.plist内容："
             /usr/libexec/PlistBuddy -c "Print" "$APP_INFO_PLIST"
         else
             echo "警告：无法找到应用包中的Info.plist"
         fi
+        
+        # 复制本地化文件到最终的应用包中
+        mkdir -p "build/ipa/Payload/iMemScan.app/zh-Hans.lproj"
+        cp -f "iMemScan/zh-Hans.lproj/Localizable.strings" "build/ipa/Payload/iMemScan.app/zh-Hans.lproj/"
+        echo "已复制本地化文件到应用包"
         
         # 确保ldid可用并签名应用
         which ldid
