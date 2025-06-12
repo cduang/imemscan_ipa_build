@@ -30,7 +30,8 @@
 "Select First Half" = " < ";
 "Select Second Half" = " > ";
 "Numeric Search" = "搜索";
-"Value Search" = "搜索";
+"Numeric search" = "搜索";
+"Value Search" = "值搜索";
 
 /* TabBar 标签 */
 "Processes" = "进程";
@@ -58,8 +59,6 @@
 "Refreshing data..." = "刷新数据...";
 "Modify All" = "全部修改";
 "Select" = "选择";
-"Value Search" = "值搜索";
-"Nearby Search" = "邻近搜索";
 "Clear" = "清除";
 "Clear Results" = "清除结果";
 "Confirm" = "确认";
@@ -70,9 +69,9 @@
 "Instructions for use" = "使用说明";
 "Contact information" = "联系信息";
 "Feature Introduction" = "功能介绍";
-"uninstall app" = "卸载应用";
-"download update" = "下载更新";
-"Search Result Limit" = "搜索结果数量限制";
+"Uninstall App" = "卸载应用";
+"Download Update" = "下载更新";
+"Search result limit" = "搜索结果数量限制";
 "Input Number" = "输入数字";
 "Input Value" = "输入值";
 "Scan" = "扫描";
@@ -86,7 +85,6 @@
 "Delete" = "删除";
 "Add" = "添加";
 "Save" = "保存";
-"Cancel" = "取消";
 "OK" = "确定";
 "Yes" = "是";
 "No" = "否";
@@ -129,7 +127,6 @@
 "Ascending" = "升序";
 "Descending" = "降序";
 "Options" = "选项";
-"Settings" = "设置";
 "Preferences" = "偏好设置";
 "Language" = "语言";
 "Theme" = "主题";
@@ -169,15 +166,12 @@
 "Apply to all" = "应用到全部";
 "Revert" = "还原";
 "Restore" = "恢复";
-"Delete" = "删除";
 "Remove" = "移除";
-"Clear" = "清除";
 "Clear all" = "清除全部";
 "Select all" = "全选";
 "Deselect all" = "取消全选";
 "Selected" = "已选择";
 "Unselected" = "未选择";
-"Filter" = "筛选";
 "Filtered" = "已筛选";
 "Searched" = "已搜索";
 "Results" = "结果";
@@ -253,7 +247,6 @@
 "Gender" = "性别";
 "Male" = "男";
 "Female" = "女";
-"Other" = "其他";
 "Website" = "网站";
 "Bio" = "简介";
 "About me" = "关于我";
@@ -312,8 +305,6 @@
 "This year" = "今年";
 "Last year" = "去年";
 "Next year" = "明年";
-"Date" = "日期";
-"Time" = "时间";
 "Duration" = "持续时间";
 "Period" = "周期";
 "Interval" = "间隔";
@@ -373,12 +364,9 @@
 "seconds" = "秒";
 "Terms of Service Notification" = "服务条款通知";
 "Loading..." = "加载中...";
-"Uninstall App" = "卸载应用";
-"Download Update" = "下载更新";
 "Uninstall command" = "卸载命令";
 "Are you sure you want to uninstall this app?" = "您确定要卸载此应用吗？";
 "Confirm to uninstall" = "确认卸载";
-"Clear results" = "清除结果";
 "Proximity" = "邻近";
 "Saved successfully!" = "保存成功！";
 "Group" = "分组";
