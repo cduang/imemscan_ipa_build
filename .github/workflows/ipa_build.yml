@@ -38,6 +38,13 @@ jobs:
     - name: 🛠️ 设置Xcode环境
       uses: maxim-lobanov/setup-xcode@v1  # 不指定版本，使用默认最新版本
     
+    - name: 安装依赖工具
+      run: |
+        # 安装 ldid 工具用于签名
+        brew install ldid
+        # 确认 ldid 已安装
+        which ldid
+    
     # 项目不使用CocoaPods，跳过相关步骤
     - name: 设置语言环境
       run: |
@@ -97,7 +104,8 @@ jobs:
         mkdir -p build/ipa/Payload
         cp -r build/iMemScan.xcarchive/Products/Applications/*.app build/ipa/Payload/
         
-        # 签名应用
+        # 确保ldid可用并签名应用
+        which ldid
         ldid -Sentitlements.plist build/ipa/Payload/*.app/iMemScan
         
         # 创建带日期和语言后缀的文件名
